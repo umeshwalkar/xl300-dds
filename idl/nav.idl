@@ -20,7 +20,7 @@ module xl300 {
   // ---- nav/core : NSS-validated single source of truth -----------------------
   @extensibility(APPENDABLE)
   struct NavState {
-    Header header;
+    CommonHeader header;
     double lat;                     // deg   (INS; absolute-corrected via nav/aux)
     double lon;                     // deg
     double depth;                   // m     VOTED/SUBSTITUTED: INS/SVP/CTD
@@ -53,7 +53,7 @@ module xl300 {
   // ---- nav/aux : enrichment ONLY (never repeats depth/position/orientation) ---
   @extensibility(APPENDABLE)
   struct NavAux {
-    Header header;
+    CommonHeader header;
     double cog;                     // course over ground (GNSS, surface)
     double sog;                     // speed over ground
     double altitude_bow;            // independent SBES (trim, not vehicle altitude)
@@ -70,7 +70,7 @@ module xl300 {
   // Payload treats this as read-only geo-reference, not a vehicle-state source.
   @extensibility(APPENDABLE)
   struct NavPayload {
-    Header header;
+    CommonHeader header;
     double lat;
     double lon;
     double depth;
@@ -86,7 +86,7 @@ module xl300 {
   // ins_manager subscribes this and is the only thing that writes to the physical INS.
   @extensibility(APPENDABLE)
   struct InsAiding {
-    Header header;
+    CommonHeader header;
     string<128> gpgga;              // NMEA position aid (bounded for RT determinism)
     string<128> gpzda;              // NMEA time aid
     double usbl_n;                  // USBL position aid, sourced from CMS (see UsblAiding)
@@ -103,7 +103,7 @@ module xl300 {
   // aiding input, subject to NSS's own reject-on-doubt gating before it reaches the INS.
   @extensibility(APPENDABLE)
   struct UsblAiding {
-    Header header;
+    CommonHeader header;
     double north;
     double east;
     double down;

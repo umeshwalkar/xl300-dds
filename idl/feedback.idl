@@ -10,7 +10,7 @@ module xl300 {
   // feedback/hyss : HYSS -> MNSS, SES
   @extensibility(APPENDABLE)
   struct ActuatorFb {
-    Header header;
+    CommonHeader header;
     double fin_pos_1;               // deg actual
     double fin_pos_2;
     double fin_pos_3;
@@ -21,7 +21,7 @@ module xl300 {
   // feedback/pcss : PCSS -> MNSS, SES
   @extensibility(APPENDABLE)
   struct PropulsionFb {
-    Header header;
+    CommonHeader header;
     double rpm;                     // actual
     double thrust_est;              // N estimated
     double motor_current;           // A
@@ -32,7 +32,7 @@ module xl300 {
   // feedback/trim : Trim & Ballast -> MNSS, SES
   @extensibility(APPENDABLE)
   struct TrimFb {
-    Header header;
+    CommonHeader header;
     double trim_actual;             // deg
     double ballast_actual;          // kg or normalized
     Validity health;
@@ -41,7 +41,7 @@ module xl300 {
   // feedback/pcs : PCS -> TMS, SES
   @extensibility(APPENDABLE)
   struct PlatformFb {
-    Header header;
+    CommonHeader header;
     double hull_pressure;           // bar
     double leak_index;              // 0..1
     Validity health;

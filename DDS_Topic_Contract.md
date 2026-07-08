@@ -169,7 +169,7 @@ Reference these by name in the tables instead of repeating settings.
 Authoritative types live in versioned `.idl`; this is the shape. Keep a `schema_version` in every type for forward/backward compatibility (extensible types).
 
 ```idl
-struct Header {
+struct CommonHeader {  // NOT "Header": eProsima IDL parser is case-insensitive vs field "header" (see dds/idl/common.idl)
   unsigned long long stamp_device;   // device timestamp (preferred); INS UTC is the vehicle reference (PPS-disciplined)
   unsigned long long stamp_ingest;   // adaptor ingest stamp, NTP-disciplined ns (fabric is NTP, not PTP)
   unsigned short     schema_version;
@@ -179,7 +179,7 @@ enum Validity { VALID, DEGRADED, INVALID };
 enum NavIntegrityState { NAV_NORMAL, NAV_DEGRADED, NAV_INVALID };   // consolidated banding, T0/T1/T2 (§3)
 
 struct NavState {            // nav/core — NSS-validated single source of truth (§1.4)
-  Header header;
+  CommonHeader header;
   double lat, lon;           // deg   (INS; absolute-corrected in nav/aux)
   double depth, altitude;    // m     (VOTED/SUBSTITUTED: depth=INS/SVP/CTD vote, altitude=INS/SBES)
   double roll, pitch, heading;       // deg   (INS)
@@ -195,7 +195,7 @@ struct NavState {            // nav/core — NSS-validated single source of trut
 
 // nav/aux carries ONLY fields not in nav/core — never repeats depth/position/orientation (§1.4)
 struct NavAux {              // nav/aux — same publisher as nav/core (NSS), separate topic
-  Header header;
+  CommonHeader header;
   double cog, sog;                   // course/speed over ground — GNSS (surface)
   double altitude_bow, altitude_aft; // independent SBES (for trim, not vehicle altitude)
   double seabed_trim;                // derived bow vs aft
@@ -205,7 +205,7 @@ struct NavAux {              // nav/aux — same publisher as nav/core (NSS), se
 
 // nav/payload — reduced geo-reference subset, bridged to Domain 1 payload partition (SAD EIF-06)
 struct NavPayload {
-  Header header;
+  CommonHeader header;
   double lat, lon, depth;
   double roll, pitch, heading;
   double speed;                      // body-frame speed magnitude
@@ -213,7 +213,7 @@ struct NavPayload {
 };
 
 struct InsAiding {           // aiding/ins — NSS publishes, ins_manager subscribes+delivers (reject-on-doubt gated)
-  Header header;
+  CommonHeader header;
   string gpgga; string gpzda;        // NMEA aiding to INS
   double usbl_n, usbl_e, usbl_d;     // USBL position aid, sourced from CMS aiding/usbl-position
   double sound_velocity;             // SVP aid
@@ -222,7 +222,7 @@ struct InsAiding {           // aiding/ins — NSS publishes, ins_manager subscr
 
 // aiding/usbl-position — CMS (usbl-manager) -> NSS; USBL is CMS-owned (comms link), NSS gets only this derived feed
 struct UsblAiding {
-  Header header;
+  CommonHeader header;
   double north, east, down;
   double quality;                    // CMS's own comms-link/fix quality
   boolean valid;
@@ -230,7 +230,7 @@ struct UsblAiding {
 
 // sensors/ins — ins_manager -> NSS (all 3 replicas subscribe identically); NOT on the public bus
 struct InsSample {
-  Header header;
+  CommonHeader header;
   double lat, lon, depth, altitude;
   double roll, pitch, heading;
   double vx, vy, vz, wx, wy, wz;
@@ -240,7 +240,7 @@ struct InsSample {
 
 // sensors/gnss — GNSS-1 (2 antennas) also provides heading; GNSS-2 (1 antenna) position only
 struct GnssFix {
-  Header header;
+  CommonHeader header;
   @key unsigned short sensor_id;     // 1 or 2
   double lat, lon, alt, cog, sog;
   double heading;                    // valid only for sensor_id=1
@@ -250,14 +250,14 @@ struct GnssFix {
 };
 
 struct SafetyState {         // safety/state
-  Header header;
+  CommonHeader header;
   @key octet zone;
   enum State { NOMINAL, CAUTION, EMERGENCY_SURFACE, ABORT } state;
   unsigned long reason_bits;
 };
 
 struct Heartbeat {           // health/<subsystem>
-  Header header;
+  CommonHeader header;
   @key string node;
   enum Status { OK, DEGRADED, FAULT } status;
   unsigned long seq;

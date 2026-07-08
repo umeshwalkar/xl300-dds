@@ -6,10 +6,15 @@
 
 module xl300 {
 
-  // Every message carries a Header. Time base (plan §6): device stamp preferred,
-  // INS UTC is the vehicle reference (PPS-disciplined); ingest stamp is NTP ns.
+  // Every message carries a Header (field name 'header' everywhere it's used). Named
+  // 'CommonHeader', NOT 'Header', because eProsima's IDL parser is case-insensitive for
+  // identifier collision checks (known upstream bug: github.com/eProsima/IDL-Parser#38)
+  // -- a field literally named 'header' collides with a type named 'Header' even though
+  // they're in different scopes per spec. Don't rename it back.
+  // Time base (plan §6): device stamp preferred, INS UTC is the vehicle reference
+  // (PPS-disciplined); ingest stamp is NTP ns.
   @extensibility(APPENDABLE)
-  struct Header {
+  struct CommonHeader {
     unsigned long long stamp_device;   // ns since epoch, from the device (preferred)
     unsigned long long stamp_ingest;   // ns since epoch, when the adaptor received it (NTP)
     unsigned short     schema_version; // bump when the type changes shape

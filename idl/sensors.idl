@@ -23,7 +23,7 @@ module xl300 {
   // consumers just take the latest sample). NSS subscribes this like any other sensor.
   @extensibility(APPENDABLE)
   struct InsSample {
-    Header header;
+    CommonHeader header;
     double lat;
     double lon;
     double depth;
@@ -51,7 +51,7 @@ module xl300 {
   // position only. heading_valid is only ever true for sensor_id=1.
   @extensibility(APPENDABLE)
   struct GnssFix {
-    Header header;
+    CommonHeader header;
     @key unsigned short sensor_id;  // 1 or 2
     double lat;
     double lon;
@@ -68,7 +68,7 @@ module xl300 {
   // sensors/svp
   @extensibility(APPENDABLE)
   struct SvpSample {
-    Header header;
+    CommonHeader header;
     double depth;
     double sound_velocity;
     double temperature;
@@ -78,7 +78,7 @@ module xl300 {
   // sensors/sbes  (two instances: mount = bow, aft) — complementary, NOT redundant
   @extensibility(APPENDABLE)
   struct Altitude {
-    Header header;
+    CommonHeader header;
     @key octet mount;               // 0 = bow, 1 = aft
     double range;                   // m to seabed
     double confidence;
@@ -88,7 +88,7 @@ module xl300 {
   // sensors/ctd/depth
   @extensibility(APPENDABLE)
   struct DepthSample {
-    Header header;
+    CommonHeader header;
     double depth;
     double pressure;
     boolean valid;
@@ -97,7 +97,7 @@ module xl300 {
   // sensors/ctd/sv
   @extensibility(APPENDABLE)
   struct SoundVel {
-    Header header;
+    CommonHeader header;
     double sound_velocity;
     boolean valid;
   };

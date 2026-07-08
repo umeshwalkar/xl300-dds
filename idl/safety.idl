@@ -14,7 +14,7 @@ module xl300 {
   // safety/state : SES -> all actuators + CMS
   @extensibility(APPENDABLE)
   struct SafetyState {
-    Header header;
+    CommonHeader header;
     @key octet   zone;              // safety zone id (keyed: independent per zone)
     SafetyLevel  level;
     unsigned long reason_bits;      // bitmask of triggering conditions

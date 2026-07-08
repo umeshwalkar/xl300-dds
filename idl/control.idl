@@ -11,7 +11,7 @@ module xl300 {
   // ctrl/setpoints/mnss : TMS -> MNSS (what maneuver to achieve)
   @extensibility(APPENDABLE)
   struct ManeuverCmd {
-    Header header;
+    CommonHeader header;
     double desired_heading;         // deg
     double desired_depth;           // m
     double desired_speed;           // m/s
@@ -21,7 +21,7 @@ module xl300 {
   // ctrl/thrust/cmd : MNSS -> PCSS
   @extensibility(APPENDABLE)
   struct ThrustCmd {
-    Header header;
+    CommonHeader header;
     double thrust;                  // N or normalized -1..1
     double rpm_setpoint;            // rev/min (if applicable)
   };
@@ -29,7 +29,7 @@ module xl300 {
   // ctrl/fins/cmd : MNSS -> HYSS
   @extensibility(APPENDABLE)
   struct FinCmd {
-    Header header;
+    CommonHeader header;
     double fin_angle_1;             // deg per control surface
     double fin_angle_2;
     double fin_angle_3;
@@ -39,7 +39,7 @@ module xl300 {
   // ctrl/trim/cmd : MNSS -> Trim & Ballast / PNS
   @extensibility(APPENDABLE)
   struct TrimCmd {
-    Header header;
+    CommonHeader header;
     double trim_target;             // deg pitch trim
     double ballast_target;          // kg or normalized
   };

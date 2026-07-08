@@ -14,7 +14,7 @@ module xl300 {
   // health/<subsystem> : keyed by node so one topic tracks every subsystem instance
   @extensibility(APPENDABLE)
   struct Heartbeat {
-    Header header;
+    CommonHeader header;
     @key string<64> node;           // e.g. "mnss", "nss", "ins-manager", "gnss-1"
     HealthStatus    status;
     unsigned long   seq;            // increments each beat; gaps = missed
