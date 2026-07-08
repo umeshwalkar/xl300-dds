@@ -1,0 +1,25 @@
+// safety.idl — SES safe-state broadcast (Domain 0). SAFETY QoS = RELIABLE +
+// TRANSIENT_LOCAL (a restarted actuator instantly learns the current safe-state) +
+// EXCLUSIVE (SES replicas by strength). enum is module-scope (nested enums are not
+// portable IDL).
+#ifndef XL300_SAFETY_IDL
+#define XL300_SAFETY_IDL
+
+#include "common.idl"
+
+module xl300 {
+
+  enum SafetyLevel { NOMINAL, CAUTION, EMERGENCY_SURFACE, ABORT };
+
+  // safety/state : SES -> all actuators + CMS
+  @extensibility(APPENDABLE)
+  struct SafetyState {
+    Header header;
+    @key octet   zone;              // safety zone id (keyed: independent per zone)
+    SafetyLevel  level;
+    unsigned long reason_bits;      // bitmask of triggering conditions
+  };
+
+};
+
+#endif

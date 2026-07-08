@@ -1,0 +1,25 @@
+// health.idl — universal heartbeat. EVERY subsystem publishes health/<name>.
+// HEALTH QoS: BEST_EFFORT + a DEADLINE = the failure detector. SES arms
+// on_deadline_missed; a missed heartbeat IS the fault signal (no polling, no broker).
+// This is DDS's built-in replacement for MQTT Last-Will-and-Testament.
+#ifndef XL300_HEALTH_IDL
+#define XL300_HEALTH_IDL
+
+#include "common.idl"
+
+module xl300 {
+
+  enum HealthStatus { OK, DEGRADED, FAULT };
+
+  // health/<subsystem> : keyed by node so one topic tracks every subsystem instance
+  @extensibility(APPENDABLE)
+  struct Heartbeat {
+    Header header;
+    @key string<64> node;           // e.g. "mnss", "nss", "ins-manager", "gnss-1"
+    HealthStatus    status;
+    unsigned long   seq;            // increments each beat; gaps = missed
+  };
+
+};
+
+#endif

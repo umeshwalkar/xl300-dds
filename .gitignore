@@ -1,0 +1,3 @@
+# Generated type-support code (produced by gen.sh from the .idl sources). Never commit —
+# it is a build product, regenerated per Fast DDS Gen version. The .idl files ARE the source.
+generated/

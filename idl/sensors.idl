@@ -1,0 +1,107 @@
+// sensors.idl — raw sensor samples on the private nss-internal partition (Domain 0).
+// Keyed types (@key) let ONE topic carry multiple instances: e.g. sensors/gnss with
+// sensor_id 1 & 2 are two independent instances (each with its own history/liveliness).
+// This is DDS's version of an MQTT key/instance table.
+//
+// Rates below adopt the SAD/datasheet values (not max-capability numbers):
+//   ins        up to 200 Hz ingest (SPRINT-Nav Mini); NSS fuses/publishes nav/core at 100 Hz
+//   gnss       100 Hz position / 50 Hz heading (AsteRx-U3)
+//   svp        30 Hz (uvSVP)
+//   sbes       1-10 Hz (ISA200)
+// USBL is NOT here — USBL(1,2) are owned by CMS (acoustic comms link); NSS receives a
+// derived position feed via aiding/usbl-position (UsblAiding, nav.idl), not a raw sensor type.
+#ifndef XL300_SENSORS_IDL
+#define XL300_SENSORS_IDL
+
+#include "common.idl"
+
+module xl300 {
+
+  // sensors/ins — published by ins_manager (NOT read directly by NSS replicas). Raw
+  // INS+DVL solution, republished from the INS's UDP broadcast output onto nss-internal
+  // (SHARED ownership; harmless if both ins_manager replicas independently republish —
+  // consumers just take the latest sample). NSS subscribes this like any other sensor.
+  @extensibility(APPENDABLE)
+  struct InsSample {
+    Header header;
+    double lat;
+    double lon;
+    double depth;
+    double altitude;
+    double roll;
+    double pitch;
+    double heading;
+    double vx;
+    double vy;
+    double vz;
+    double wx;
+    double wy;
+    double wz;
+    double water_temp;
+    double sound_velocity;
+    Validity v_position;            // INS's OWN validity flags (pre-NSS-consolidation)
+    Validity v_depth;
+    Validity v_altitude;
+    Validity v_heading;
+    Validity v_velocity;
+  };
+
+  // sensors/gnss  (two instances: sensor_id = 1, 2).
+  // GNSS-1 has 2 antennas -> also provides heading (GPS-compass); GNSS-2 has 1 antenna,
+  // position only. heading_valid is only ever true for sensor_id=1.
+  @extensibility(APPENDABLE)
+  struct GnssFix {
+    Header header;
+    @key unsigned short sensor_id;  // 1 or 2
+    double lat;
+    double lon;
+    double alt;
+    double cog;
+    double sog;
+    double heading;                 // deg; valid only for sensor_id=1 (dual-antenna)
+    boolean heading_valid;
+    octet  fix_quality;             // NMEA GGA fix quality
+    octet  num_sats;
+    boolean valid;
+  };
+
+  // sensors/svp
+  @extensibility(APPENDABLE)
+  struct SvpSample {
+    Header header;
+    double depth;
+    double sound_velocity;
+    double temperature;
+    boolean valid;
+  };
+
+  // sensors/sbes  (two instances: mount = bow, aft) — complementary, NOT redundant
+  @extensibility(APPENDABLE)
+  struct Altitude {
+    Header header;
+    @key octet mount;               // 0 = bow, 1 = aft
+    double range;                   // m to seabed
+    double confidence;
+    boolean valid;
+  };
+
+  // sensors/ctd/depth
+  @extensibility(APPENDABLE)
+  struct DepthSample {
+    Header header;
+    double depth;
+    double pressure;
+    boolean valid;
+  };
+
+  // sensors/ctd/sv
+  @extensibility(APPENDABLE)
+  struct SoundVel {
+    Header header;
+    double sound_velocity;
+    boolean valid;
+  };
+
+};
+
+#endif

@@ -1,0 +1,116 @@
+// nav.idl — the navigation vehicle-state types (Domain 0).
+// NavState (nav/core) is THE single source of truth (contract §1.4): one publisher
+// (NSS, the consolidated fusion+enrichment component), never a competing INS topic.
+// NavAux carries only fields that are NOT in nav/core — same publisher (NSS), separate
+// topic. InsAiding is the reject-on-doubt aiding NSS sends toward the INS (delivered via
+// ins_manager, which holds the actual wire connection to the physical INS).
+#ifndef XL300_NAV_IDL
+#define XL300_NAV_IDL
+
+#include "common.idl"
+
+module xl300 {
+
+  // Consolidated navigation integrity band (SAD §4.4/§8): aggregate of the per-field
+  // Validity flags below, driven by numeric uncertainty against hysteresis thresholds
+  // T0 < T1 < T2 (position/heading/velocity). NORMAL<->DEGRADED at T0, DEGRADED<->INVALID
+  // at T2 (escalating) / T1 (recovering) — see DDS_Topic_Contract.md for the exact bands.
+  enum NavIntegrityState { NAV_NORMAL, NAV_DEGRADED, NAV_INVALID };
+
+  // ---- nav/core : NSS-validated single source of truth -----------------------
+  @extensibility(APPENDABLE)
+  struct NavState {
+    Header header;
+    double lat;                     // deg   (INS; absolute-corrected via nav/aux)
+    double lon;                     // deg
+    double depth;                   // m     VOTED/SUBSTITUTED: INS/SVP/CTD
+    double altitude;                // m     VOTED/SUBSTITUTED: INS/SBES
+    double roll;                    // deg   (INS)
+    double pitch;                   // deg
+    double heading;                 // deg
+    double vx;                      // m/s   body velocities (INS)
+    double vy;
+    double vz;
+    double wx;                      // rad/s angular rates (INS)
+    double wy;
+    double wz;
+    double water_temp;              // degC
+    double sound_velocity;          // m/s   best of INS/SVP/CTD
+    // 1-sigma uncertainty, feeds the T0/T1/T2 integrity banding below (SAD §4.4).
+    double sigma_horizontal;        // m     horizontal position uncertainty
+    double sigma_vertical;          // m     vertical (depth) uncertainty
+    double sigma_heading;           // deg
+    double sigma_velocity;          // m/s
+    Validity v_position;            // NSS-consolidated per-field validity
+    Validity v_depth;
+    Validity v_altitude;
+    Validity v_heading;
+    Validity v_velocity;
+    octet    src_depth;             // provenance: 0=INS 1=SVP 2=CTD 3=vote
+    NavIntegrityState nav_state;    // consolidated Normal/Degraded/Invalid (aggregate)
+  };
+
+  // ---- nav/aux : enrichment ONLY (never repeats depth/position/orientation) ---
+  @extensibility(APPENDABLE)
+  struct NavAux {
+    Header header;
+    double cog;                     // course over ground (GNSS, surface)
+    double sog;                     // speed over ground
+    double altitude_bow;            // independent SBES (trim, not vehicle altitude)
+    double altitude_aft;
+    double seabed_trim;             // derived bow vs aft
+    double pos_fix_residual;        // GNSS/USBL absolute-fix residual
+    Validity q_fix;                 // enrichment quality
+    Validity q_trim;
+  };
+
+  // ---- nav/payload : reduced geo-reference subset bridged to Domain 1 --------
+  // Only what perception/path-planning need (position, orientation, speed) — never
+  // the full nav/core validity/provenance detail, and never a duplicate authority:
+  // Payload treats this as read-only geo-reference, not a vehicle-state source.
+  @extensibility(APPENDABLE)
+  struct NavPayload {
+    Header header;
+    double lat;
+    double lon;
+    double depth;
+    double roll;
+    double pitch;
+    double heading;
+    double speed;                   // sqrt(vx^2+vy^2+vz^2), body-frame speed
+    NavIntegrityState nav_state;
+  };
+
+  // ---- aiding/ins : arbitrated aiding toward the INS, gated "reject-on-doubt" --
+  // Published by NSS (EXCLUSIVE ownership, same strength as nav/core's writer);
+  // ins_manager subscribes this and is the only thing that writes to the physical INS.
+  @extensibility(APPENDABLE)
+  struct InsAiding {
+    Header header;
+    string<128> gpgga;              // NMEA position aid (bounded for RT determinism)
+    string<128> gpzda;              // NMEA time aid
+    double usbl_n;                  // USBL position aid, sourced from CMS (see UsblAiding)
+    double usbl_e;
+    double usbl_d;
+    double sound_velocity;          // SVP aid
+    Validity gate;                  // VALID = forward to INS, else WITHHELD
+  };
+
+  // ---- aiding/usbl-position : CMS -> NSS, position+time derived from USBL -----
+  // USBL(1,2) are owned by CMS (their primary role is the acoustic comms link to the
+  // topside GUI); CMS performs its own comms-quality arbitration between the 2 units
+  // and publishes ONE consolidated position+time feed. NSS consumes this purely as an
+  // aiding input, subject to NSS's own reject-on-doubt gating before it reaches the INS.
+  @extensibility(APPENDABLE)
+  struct UsblAiding {
+    Header header;
+    double north;
+    double east;
+    double down;
+    double quality;                 // CMS's own link/fix quality indicator
+    boolean valid;
+  };
+
+};
+
+#endif

@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- XL300 Fast DDS QoS profiles = the named profiles from DDS_Topic_Contract §2.
+     Apply by setting  FASTRTPS_DEFAULT_PROFILES_FILE=/etc/xl300/xl300_profiles.xml
+     then create entities BY PROFILE NAME in code (see dds/README.md).
+
+     IMPORTANT (RxO rule): a DataWriter and DataReader only connect if their QoS are
+     COMPATIBLE (reader's request <= writer's offer). Keep each topic's writer+reader
+     on the matching profile below or they silently won't communicate. -->
+<dds xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+  <profiles>
+
+    <!-- ================= PARTICIPANT (Domain 0) ================================
+         Start with SIMPLE discovery (multicast) — zero config, "just works" on a LAN
+         and is perfect for the VM lab. Switch to the Discovery Server (CLIENT) block
+         at the bottom later for scale (contract §2.0). -->
+    <participant profile_name="xl300_domain0" is_default_profile="true">
+      <domainId>0</domainId>
+      <rtps>
+        <builtin>
+          <discovery_config>
+            <discoveryProtocol>SIMPLE</discoveryProtocol>
+          </discovery_config>
+        </builtin>
+      </rtps>
+    </participant>
+
+    <!-- ================= DATA WRITER PROFILES ================================== -->
+
+    <!-- STATE: latest-value streams (nav/core, feedback/*). RELIABLE, EXCLUSIVE. -->
+    <data_writer profile_name="STATE">
+      <qos>
+        <reliability><kind>RELIABLE</kind></reliability>
+        <durability><kind>VOLATILE</kind></durability>
+        <ownership><kind>EXCLUSIVE</kind></ownership>
+        <!-- deadline = 2x period; nav/core @50Hz -> 40 ms -->
+        <deadline><period><sec>0</sec><nanosec>40000000</nanosec></period></deadline>
+        <!-- ownership_strength is set PER-REPLICA at runtime (primary 100 > standby 90);
+             see README. You may also hard-code it here per deployment. -->
+      </qos>
+      <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
+    </data_writer>
+
+    <!-- CONTROL: commands (ctrl/*). RELIABLE + TRANSIENT_LOCAL + EXCLUSIVE. -->
+    <data_writer profile_name="CONTROL">
+      <qos>
+        <reliability><kind>RELIABLE</kind></reliability>
+        <durability><kind>TRANSIENT_LOCAL</kind></durability>
+        <ownership><kind>EXCLUSIVE</kind></ownership>
+        <deadline><period><sec>0</sec><nanosec>40000000</nanosec></period></deadline>
+        <liveliness><kind>AUTOMATIC</kind><lease_duration><sec>0</sec><nanosec>200000000</nanosec></lease_duration></liveliness>
+      </qos>
+      <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
+    </data_writer>
+
+    <!-- SAFETY: safety/state. RELIABLE + TRANSIENT_LOCAL (late joiner learns state). -->
+    <data_writer profile_name="SAFETY">
+      <qos>
+        <reliability><kind>RELIABLE</kind></reliability>
+        <durability><kind>TRANSIENT_LOCAL</kind></durability>
+        <ownership><kind>EXCLUSIVE</kind></ownership>
+        <deadline><period><sec>0</sec><nanosec>50000000</nanosec></period></deadline>
+        <liveliness><kind>AUTOMATIC</kind><lease_duration><sec>0</sec><nanosec>100000000</nanosec></lease_duration></liveliness>
+      </qos>
+      <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
+    </data_writer>
+
+    <!-- SENSOR: raw high-rate streams (sensors/*). BEST_EFFORT (stale = useless). -->
+    <data_writer profile_name="SENSOR">
+      <qos>
+        <reliability><kind>BEST_EFFORT</kind></reliability>
+        <durability><kind>VOLATILE</kind></durability>
+        <ownership><kind>SHARED</kind></ownership>
+      </qos>
+      <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
+    </data_writer>
+
+    <!-- HEALTH: heartbeats (health/*). BEST_EFFORT + deadline = failure detector. -->
+    <data_writer profile_name="HEALTH">
+      <qos>
+        <reliability><kind>BEST_EFFORT</kind></reliability>
+        <durability><kind>VOLATILE</kind></durability>
+        <ownership><kind>SHARED</kind></ownership>
+        <deadline><period><sec>1</sec><nanosec>0</nanosec></period></deadline>
+      </qos>
+      <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
+    </data_writer>
+
+    <!-- ================= DATA READER PROFILES (mirror the writers) ============= -->
+    <data_reader profile_name="STATE">
+      <qos>
+        <reliability><kind>RELIABLE</kind></reliability>
+        <durability><kind>VOLATILE</kind></durability>
+        <ownership><kind>EXCLUSIVE</kind></ownership>
+        <deadline><period><sec>0</sec><nanosec>40000000</nanosec></period></deadline>
+      </qos>
+      <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
+    </data_reader>
+
+    <data_reader profile_name="CONTROL">
+      <qos>
+        <reliability><kind>RELIABLE</kind></reliability>
+        <durability><kind>TRANSIENT_LOCAL</kind></durability>
+        <ownership><kind>EXCLUSIVE</kind></ownership>
+        <deadline><period><sec>0</sec><nanosec>40000000</nanosec></period></deadline>
+        <liveliness><kind>AUTOMATIC</kind><lease_duration><sec>0</sec><nanosec>200000000</nanosec></lease_duration></liveliness>
+      </qos>
+      <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
+    </data_reader>
+
+    <data_reader profile_name="SAFETY">
+      <qos>
+        <reliability><kind>RELIABLE</kind></reliability>
+        <durability><kind>TRANSIENT_LOCAL</kind></durability>
+        <ownership><kind>EXCLUSIVE</kind></ownership>
+        <deadline><period><sec>0</sec><nanosec>50000000</nanosec></period></deadline>
+        <liveliness><kind>AUTOMATIC</kind><lease_duration><sec>0</sec><nanosec>100000000</nanosec></lease_duration></liveliness>
+      </qos>
+      <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
+    </data_reader>
+
+    <data_reader profile_name="SENSOR">
+      <qos>
+        <reliability><kind>BEST_EFFORT</kind></reliability>
+        <durability><kind>VOLATILE</kind></durability>
+      </qos>
+      <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
+    </data_reader>
+
+    <data_reader profile_name="HEALTH">
+      <qos>
+        <reliability><kind>BEST_EFFORT</kind></reliability>
+        <durability><kind>VOLATILE</kind></durability>
+        <deadline><period><sec>1</sec><nanosec>0</nanosec></period></deadline>
+      </qos>
+      <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
+    </data_reader>
+
+    <!-- ============ OPTIONAL: Discovery Server (enable later for scale) =========
+    Replace the SIMPLE participant above with this CLIENT one. Run 2 servers:
+      fastdds discovery -i 0 -l 192.168.56.11 -p 11811   (on cpu-1)
+      fastdds discovery -i 1 -l 192.168.56.13 -p 11811   (on cpu-3)
+    <participant profile_name="xl300_domain0" is_default_profile="true">
+      <domainId>0</domainId>
+      <rtps><builtin><discovery_config>
+        <discoveryProtocol>CLIENT</discoveryProtocol>
+        <discoveryServersList>
+          <RemoteServer prefix="44.53.00.5f.45.50.52.4f.53.49.4d.41">
+            <metatrafficUnicastLocatorList>
+              <locator><udpv4><address>192.168.56.11</address><port>11811</port></udpv4></locator>
+            </metatrafficUnicastLocatorList>
+          </RemoteServer>
+        </discoveryServersList>
+      </discovery_config></builtin></rtps>
+    </participant>
+    ========================================================================== -->
+
+  </profiles>
+</dds>

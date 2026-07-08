@@ -1,0 +1,49 @@
+// control.idl — command topics (Domain 0, Control VLAN). CONTROL QoS = RELIABLE +
+// EXCLUSIVE ownership (redundant publishers fail over by strength). Fields below are
+// a sensible first cut — refine against your actuator interfaces.
+#ifndef XL300_CONTROL_IDL
+#define XL300_CONTROL_IDL
+
+#include "common.idl"
+
+module xl300 {
+
+  // ctrl/setpoints/mnss : TMS -> MNSS (what maneuver to achieve)
+  @extensibility(APPENDABLE)
+  struct ManeuverCmd {
+    Header header;
+    double desired_heading;         // deg
+    double desired_depth;           // m
+    double desired_speed;           // m/s
+    octet  mode;                    // 0=hold 1=transit 2=station-keep ...
+  };
+
+  // ctrl/thrust/cmd : MNSS -> PCSS
+  @extensibility(APPENDABLE)
+  struct ThrustCmd {
+    Header header;
+    double thrust;                  // N or normalized -1..1
+    double rpm_setpoint;            // rev/min (if applicable)
+  };
+
+  // ctrl/fins/cmd : MNSS -> HYSS
+  @extensibility(APPENDABLE)
+  struct FinCmd {
+    Header header;
+    double fin_angle_1;             // deg per control surface
+    double fin_angle_2;
+    double fin_angle_3;
+    double fin_angle_4;
+  };
+
+  // ctrl/trim/cmd : MNSS -> Trim & Ballast / PNS
+  @extensibility(APPENDABLE)
+  struct TrimCmd {
+    Header header;
+    double trim_target;             // deg pitch trim
+    double ballast_target;          // kg or normalized
+  };
+
+};
+
+#endif

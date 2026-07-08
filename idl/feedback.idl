@@ -1,0 +1,52 @@
+// feedback.idl — actuator/platform feedback (Domain 0). STATE QoS = latest-value,
+// RELIABLE, EXCLUSIVE. Consumed by MNSS (closing the loop) and SES (health/limits).
+#ifndef XL300_FEEDBACK_IDL
+#define XL300_FEEDBACK_IDL
+
+#include "common.idl"
+
+module xl300 {
+
+  // feedback/hyss : HYSS -> MNSS, SES
+  @extensibility(APPENDABLE)
+  struct ActuatorFb {
+    Header header;
+    double fin_pos_1;               // deg actual
+    double fin_pos_2;
+    double fin_pos_3;
+    double fin_pos_4;
+    Validity health;
+  };
+
+  // feedback/pcss : PCSS -> MNSS, SES
+  @extensibility(APPENDABLE)
+  struct PropulsionFb {
+    Header header;
+    double rpm;                     // actual
+    double thrust_est;              // N estimated
+    double motor_current;           // A
+    double motor_temp;              // degC
+    Validity health;
+  };
+
+  // feedback/trim : Trim & Ballast -> MNSS, SES
+  @extensibility(APPENDABLE)
+  struct TrimFb {
+    Header header;
+    double trim_actual;             // deg
+    double ballast_actual;          // kg or normalized
+    Validity health;
+  };
+
+  // feedback/pcs : PCS -> TMS, SES
+  @extensibility(APPENDABLE)
+  struct PlatformFb {
+    Header header;
+    double hull_pressure;           // bar
+    double leak_index;              // 0..1
+    Validity health;
+  };
+
+};
+
+#endif
