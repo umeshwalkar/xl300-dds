@@ -1,0 +1,7 @@
+# Force LF line endings on checkout, regardless of the checking-out machine's
+# core.autocrlf setting. Without this, a Windows host's git config converts LF->CRLF on
+# checkout (including when this repo is pulled in as a submodule), which breaks
+# `#!/usr/bin/env bash` shebangs inside the Linux devcontainer (env looks for a program
+# literally named "bash\r"). Applies to every consumer that submodules this repo.
+* text=auto eol=lf
+*.sh  text eol=lf

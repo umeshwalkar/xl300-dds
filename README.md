@@ -61,17 +61,29 @@ sudo apt install -y cmake g++ python3-pip libasio-dev libtinyxml2-dev \
                     openjdk-17-jdk git
 
 # Fast CDR + Fast DDS + Fast DDS Gen via colcon (official build)
-pip install -U colcon-common-extensions vcstool
+# --break-system-packages: Ubuntu 24.04's system pip is "externally managed" (PEP 668).
+pip install --break-system-packages -U colcon-common-extensions vcstool
 mkdir -p ~/fastdds/src && cd ~/fastdds
-wget https://raw.githubusercontent.com/eProsima/Fast-DDS/master/fastdds.repos -O fastdds.repos
-vcs import src < fastdds.repos
+# IMPORTANT: on the 2.x line the manifest is named 'fastrtps.repos', NOT 'fastdds.repos'
+# (a legacy name held over from before the project's Fast-RTPS -> Fast-DDS rename; 3.x
+# renamed the file too). 'master' tracks 3.x latest; for a REPRODUCIBLE 2.14.x build pin
+# a release tag instead, e.g.:
+#   wget https://raw.githubusercontent.com/eProsima/Fast-DDS/v2.14.6/fastrtps.repos -O fastrtps.repos
+wget https://raw.githubusercontent.com/eProsima/Fast-DDS/2.14.x/fastrtps.repos -O fastrtps.repos
+vcs import --recursive src < fastrtps.repos
 colcon build
 echo 'source ~/fastdds/install/setup.bash' >> ~/.bashrc && source ~/.bashrc
 # fastddsgen: build the generator
 cd ~/fastdds/src/fastddsgen && ./gradlew assemble
-sudo ln -sf ~/fastdds/src/fastddsgen/scripts/fastddsgen /usr/local/bin/fastddsgen
+# DO NOT symlink scripts/fastddsgen into /usr/local/bin: it computes its own directory as
+# `dirname "$0"` with no symlink resolution, so a symlinked invocation looks for the jar
+# relative to /usr/local/bin and fails with "Unable to access jarfile ...". Put the REAL
+# directory on PATH instead:
+echo 'export PATH="$HOME/fastdds/src/fastddsgen/scripts:$PATH"' >> ~/.bashrc && source ~/.bashrc
 ```
-(Full/alternate instructions: eProsima Fast DDS "Installation from sources" docs.)
+(Full/alternate instructions: eProsima Fast DDS "Installation from sources" docs. Note: on
+2.x the CMake package this installs is named `fastrtps`, not `fastdds` — see each app's
+`CMakeLists.txt`, which tries both.)
 
 ## 4. See it work in 3 commands (do this first!)
 
