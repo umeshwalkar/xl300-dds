@@ -249,17 +249,23 @@ struct GnssFix {
   boolean valid;
 };
 
+enum SafetyLevel { NOMINAL, CAUTION, EMERGENCY_SURFACE, ABORT };   // module-scope, not nested (IDL doesn't allow nested enums)
+
 struct SafetyState {         // safety/state
   CommonHeader header;
   @key octet zone;
-  enum State { NOMINAL, CAUTION, EMERGENCY_SURFACE, ABORT } state;
+  SafetyLevel level;
   unsigned long reason_bits;
 };
+
+// HEALTH_* prefix: fastddsgen emits unscoped C++ enums (enumerator names leak into the
+// shared xl300 namespace), so a bare 'DEGRADED' here would collide with Validity::DEGRADED.
+enum HealthStatus { HEALTH_OK, HEALTH_DEGRADED, HEALTH_FAULT };   // module-scope, not nested (IDL doesn't allow nested enums)
 
 struct Heartbeat {           // health/<subsystem>
   CommonHeader header;
   @key string node;
-  enum Status { OK, DEGRADED, FAULT } status;
+  HealthStatus status;
   unsigned long seq;
 };
 // + SoundVel, Altitude, DepthSample, ManeuverCmd, ThrustCmd,

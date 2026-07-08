@@ -9,7 +9,10 @@
 
 module xl300 {
 
-  enum HealthStatus { OK, DEGRADED, FAULT };
+  // Prefixed (HEALTH_*) because fastddsgen emits unscoped C++ enums -- enumerator names
+  // leak into the shared 'xl300' namespace, so a bare 'DEGRADED' here would collide with
+  // Validity::DEGRADED (common.idl). Same reason NavIntegrityState uses NAV_* (nav.idl).
+  enum HealthStatus { HEALTH_OK, HEALTH_DEGRADED, HEALTH_FAULT };
 
   // health/<subsystem> : keyed by node so one topic tracks every subsystem instance
   @extensibility(APPENDABLE)
