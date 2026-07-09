@@ -84,6 +84,14 @@ module xl300 {
   // ---- aiding/ins : arbitrated aiding toward the INS, gated "reject-on-doubt" --
   // Published by NSS (EXCLUSIVE ownership, same strength as nav/core's writer);
   // ins_manager subscribes this and is the only thing that writes to the physical INS.
+  // TWO independent gates, not one: position aiding (GNSS surface-only / USBL
+  // submerged-only) and sound-velocity aiding (SVP, continuous) have genuinely
+  // different availability windows and failure modes -- bundling them under one
+  // `gate` meant a bad/stale SVP reading couldn't be rejected on its own, and a
+  // position-gate rejection (e.g. no GNSS/USBL fix) silently dropped a perfectly
+  // good SV reading too. `sv_gate` fixes that without a second topic: ins_manager
+  // already demuxes this one message onto separate physical channels
+  // (gps/usbl/sound_velocity), so a second per-field gate is the smaller change.
   @extensibility(APPENDABLE)
   struct InsAiding {
     CommonHeader header;
@@ -93,7 +101,8 @@ module xl300 {
     double usbl_e;
     double usbl_d;
     double sound_velocity;          // SVP aid
-    Validity gate;                  // VALID = forward to INS, else WITHHELD
+    Validity gate;                  // VALID = forward gpgga/gpzda/usbl_* to INS, else WITHHELD
+    Validity sv_gate;                // VALID = forward sound_velocity to INS, else WITHHELD
   };
 
   // ---- aiding/usbl-position : CMS -> NSS, position+time derived from USBL -----

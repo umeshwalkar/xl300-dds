@@ -217,7 +217,10 @@ struct InsAiding {           // aiding/ins — NSS publishes, ins_manager subscr
   string gpgga; string gpzda;        // NMEA aiding to INS
   double usbl_n, usbl_e, usbl_d;     // USBL position aid, sourced from CMS aiding/usbl-position
   double sound_velocity;             // SVP aid
-  Validity gate;                     // VALID = forward, else withheld
+  Validity gate;                     // VALID = forward gpgga/gpzda/usbl_* to INS, else withheld
+  Validity sv_gate;                  // VALID = forward sound_velocity to INS, else withheld
+  // TWO independent gates (v0.3.0): position aiding (GNSS/USBL) and SV aiding (SVP)
+  // have different availability windows -- one being withheld must not withhold the other.
 };
 
 // aiding/usbl-position — CMS (usbl-manager) -> NSS; USBL is CMS-owned (comms link), NSS gets only this derived feed
