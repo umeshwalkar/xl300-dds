@@ -5,7 +5,16 @@
 
      IMPORTANT (RxO rule): a DataWriter and DataReader only connect if their QoS are
      COMPATIBLE (reader's request <= writer's offer). Keep each topic's writer+reader
-     on the matching profile below or they silently won't communicate. -->
+     on the matching profile below or they silently won't communicate.
+
+     data_sharing=OFF on every profile: Fast DDS's Data Sharing feature (zero-copy via
+     /dev/shm) auto-negotiates whenever two participants' GUID prefixes look like the
+     "same host" — but each devcontainer is its own Docker container with an isolated
+     /dev/shm, so one participant advertises a shm segment the other can never open
+     ("Failed to open segment ... No such file or directory", HISTORY_DATASHARING_*).
+     The real deployment is multi-node anyway (separate physical CPUs per Tier-0
+     replica) where data sharing could never apply, so turning it off costs nothing in
+     production and fixes same-host-looking-but-isolated dev/test containers too. -->
 <dds xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
   <profiles>
 
@@ -36,13 +45,14 @@
         <deadline><period><sec>0</sec><nanosec>40000000</nanosec></period></deadline>
         <!-- ownership_strength is set PER-REPLICA at runtime (primary 100 > standby 90);
              see README. You may also hard-code it here per deployment. -->
+        <data_sharing><kind>OFF</kind></data_sharing>
       </qos>
       <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
     </data_writer>
 
     <!-- CONTROL: commands (ctrl/*). RELIABLE + TRANSIENT_LOCAL + EXCLUSIVE.
          announcement_period MUST be < lease_duration (DDS liveliness QoS invariant,
-         enforced by Fast DDS's check_qos -- omitting it left the implicit default at
+         enforced by Fast DDS's check_qos — omitting it left the implicit default at
          or above lease_duration, which made create_datawriter_with_profile() silently
          fail this profile and fall back to QOS_DEFAULT). Set to lease_duration/3 so a
          single lost announcement doesn't expire the lease. -->
@@ -53,6 +63,7 @@
         <ownership><kind>EXCLUSIVE</kind></ownership>
         <deadline><period><sec>0</sec><nanosec>40000000</nanosec></period></deadline>
         <liveliness><kind>AUTOMATIC</kind><lease_duration><sec>0</sec><nanosec>200000000</nanosec></lease_duration><announcement_period><sec>0</sec><nanosec>60000000</nanosec></announcement_period></liveliness>
+        <data_sharing><kind>OFF</kind></data_sharing>
       </qos>
       <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
     </data_writer>
@@ -66,6 +77,7 @@
         <ownership><kind>EXCLUSIVE</kind></ownership>
         <deadline><period><sec>0</sec><nanosec>50000000</nanosec></period></deadline>
         <liveliness><kind>AUTOMATIC</kind><lease_duration><sec>0</sec><nanosec>100000000</nanosec></lease_duration><announcement_period><sec>0</sec><nanosec>30000000</nanosec></announcement_period></liveliness>
+        <data_sharing><kind>OFF</kind></data_sharing>
       </qos>
       <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
     </data_writer>
@@ -76,6 +88,7 @@
         <reliability><kind>BEST_EFFORT</kind></reliability>
         <durability><kind>VOLATILE</kind></durability>
         <ownership><kind>SHARED</kind></ownership>
+        <data_sharing><kind>OFF</kind></data_sharing>
       </qos>
       <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
     </data_writer>
@@ -87,6 +100,7 @@
         <durability><kind>VOLATILE</kind></durability>
         <ownership><kind>SHARED</kind></ownership>
         <deadline><period><sec>1</sec><nanosec>0</nanosec></period></deadline>
+        <data_sharing><kind>OFF</kind></data_sharing>
       </qos>
       <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
     </data_writer>
@@ -98,6 +112,7 @@
         <durability><kind>VOLATILE</kind></durability>
         <ownership><kind>EXCLUSIVE</kind></ownership>
         <deadline><period><sec>0</sec><nanosec>40000000</nanosec></period></deadline>
+        <data_sharing><kind>OFF</kind></data_sharing>
       </qos>
       <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
     </data_reader>
@@ -109,6 +124,7 @@
         <ownership><kind>EXCLUSIVE</kind></ownership>
         <deadline><period><sec>0</sec><nanosec>40000000</nanosec></period></deadline>
         <liveliness><kind>AUTOMATIC</kind><lease_duration><sec>0</sec><nanosec>200000000</nanosec></lease_duration><announcement_period><sec>0</sec><nanosec>60000000</nanosec></announcement_period></liveliness>
+        <data_sharing><kind>OFF</kind></data_sharing>
       </qos>
       <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
     </data_reader>
@@ -120,6 +136,7 @@
         <ownership><kind>EXCLUSIVE</kind></ownership>
         <deadline><period><sec>0</sec><nanosec>50000000</nanosec></period></deadline>
         <liveliness><kind>AUTOMATIC</kind><lease_duration><sec>0</sec><nanosec>100000000</nanosec></lease_duration><announcement_period><sec>0</sec><nanosec>30000000</nanosec></announcement_period></liveliness>
+        <data_sharing><kind>OFF</kind></data_sharing>
       </qos>
       <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
     </data_reader>
@@ -128,6 +145,7 @@
       <qos>
         <reliability><kind>BEST_EFFORT</kind></reliability>
         <durability><kind>VOLATILE</kind></durability>
+        <data_sharing><kind>OFF</kind></data_sharing>
       </qos>
       <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
     </data_reader>
@@ -137,6 +155,7 @@
         <reliability><kind>BEST_EFFORT</kind></reliability>
         <durability><kind>VOLATILE</kind></durability>
         <deadline><period><sec>1</sec><nanosec>0</nanosec></period></deadline>
+        <data_sharing><kind>OFF</kind></data_sharing>
       </qos>
       <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
     </data_reader>
