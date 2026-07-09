@@ -75,13 +75,27 @@ module xl300 {
     boolean valid;
   };
 
-  // sensors/sbes  (two instances: mount = bow, aft) — complementary, NOT redundant
+  // sensors/sbes — up to 6 physical Impact Subsea altimeter/OAS units, keyed by
+  // sensor_id (1-6), ALL published by one process (oas_manager). sensor_id 1
+  // (FrontDown/bow) and 2 (AftDown/aft) are NSS's aiding inputs (complementary, NOT
+  // redundant); sensor_id 3-6 are obstacle-facing units consumed by OTHER subsystems
+  // (mnss/pcss), NOT by NSS. PUBLIC partition (not nss-internal): unlike
+  // sensors/ins|gnss|svp|ctd (NSS-private raw sensor feeds), this topic has
+  // consumers beyond NSS, so it cannot live on the NSS-exclusive partition — every
+  // consumer subscribes the same topic and filters client-side by sensor_id (or
+  // uses a ContentFilteredTopic to avoid seeing irrelevant instances at all).
+  // Fields map to the device's $ISADI sentence (range/confidence/energy/temp);
+  // the device's $ISHPR/$ISAGM (heading/pitch/roll, accel/gyro/mag) are NOT carried
+  // here — NSS gets attitude from the INS, not an obstacle sonar. If mnss/pcss need
+  // that data from oas_manager, it belongs on its own separate topic, not this one.
   @extensibility(APPENDABLE)
   struct Altitude {
     CommonHeader header;
-    @key octet mount;               // 0 = bow, 1 = aft
-    double range;                   // m to seabed
-    double confidence;
+    @key octet sensor_id;           // 1-6; NSS only consumes 1 (bow) and 2 (aft)
+    double range;                   // m to seabed/target (ISADI target_distance)
+    double confidence;              // 0-1 (ISADI correlation_factor)
+    double energy;                  // 0-1 signal energy (ISADI energy)
+    double temperature;             // degC, transducer temperature (ISADI temperature)
     boolean valid;
   };
 
