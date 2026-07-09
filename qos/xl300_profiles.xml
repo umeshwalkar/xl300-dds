@@ -40,26 +40,32 @@
       <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
     </data_writer>
 
-    <!-- CONTROL: commands (ctrl/*). RELIABLE + TRANSIENT_LOCAL + EXCLUSIVE. -->
+    <!-- CONTROL: commands (ctrl/*). RELIABLE + TRANSIENT_LOCAL + EXCLUSIVE.
+         announcement_period MUST be < lease_duration (DDS liveliness QoS invariant,
+         enforced by Fast DDS's check_qos -- omitting it left the implicit default at
+         or above lease_duration, which made create_datawriter_with_profile() silently
+         fail this profile and fall back to QOS_DEFAULT). Set to lease_duration/3 so a
+         single lost announcement doesn't expire the lease. -->
     <data_writer profile_name="CONTROL">
       <qos>
         <reliability><kind>RELIABLE</kind></reliability>
         <durability><kind>TRANSIENT_LOCAL</kind></durability>
         <ownership><kind>EXCLUSIVE</kind></ownership>
         <deadline><period><sec>0</sec><nanosec>40000000</nanosec></period></deadline>
-        <liveliness><kind>AUTOMATIC</kind><lease_duration><sec>0</sec><nanosec>200000000</nanosec></lease_duration></liveliness>
+        <liveliness><kind>AUTOMATIC</kind><lease_duration><sec>0</sec><nanosec>200000000</nanosec></lease_duration><announcement_period><sec>0</sec><nanosec>60000000</nanosec></announcement_period></liveliness>
       </qos>
       <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
     </data_writer>
 
-    <!-- SAFETY: safety/state. RELIABLE + TRANSIENT_LOCAL (late joiner learns state). -->
+    <!-- SAFETY: safety/state. RELIABLE + TRANSIENT_LOCAL (late joiner learns state).
+         Same announcement_period < lease_duration fix as CONTROL above. -->
     <data_writer profile_name="SAFETY">
       <qos>
         <reliability><kind>RELIABLE</kind></reliability>
         <durability><kind>TRANSIENT_LOCAL</kind></durability>
         <ownership><kind>EXCLUSIVE</kind></ownership>
         <deadline><period><sec>0</sec><nanosec>50000000</nanosec></period></deadline>
-        <liveliness><kind>AUTOMATIC</kind><lease_duration><sec>0</sec><nanosec>100000000</nanosec></lease_duration></liveliness>
+        <liveliness><kind>AUTOMATIC</kind><lease_duration><sec>0</sec><nanosec>100000000</nanosec></lease_duration><announcement_period><sec>0</sec><nanosec>30000000</nanosec></announcement_period></liveliness>
       </qos>
       <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
     </data_writer>
@@ -102,7 +108,7 @@
         <durability><kind>TRANSIENT_LOCAL</kind></durability>
         <ownership><kind>EXCLUSIVE</kind></ownership>
         <deadline><period><sec>0</sec><nanosec>40000000</nanosec></period></deadline>
-        <liveliness><kind>AUTOMATIC</kind><lease_duration><sec>0</sec><nanosec>200000000</nanosec></lease_duration></liveliness>
+        <liveliness><kind>AUTOMATIC</kind><lease_duration><sec>0</sec><nanosec>200000000</nanosec></lease_duration><announcement_period><sec>0</sec><nanosec>60000000</nanosec></announcement_period></liveliness>
       </qos>
       <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
     </data_reader>
@@ -113,7 +119,7 @@
         <durability><kind>TRANSIENT_LOCAL</kind></durability>
         <ownership><kind>EXCLUSIVE</kind></ownership>
         <deadline><period><sec>0</sec><nanosec>50000000</nanosec></period></deadline>
-        <liveliness><kind>AUTOMATIC</kind><lease_duration><sec>0</sec><nanosec>100000000</nanosec></lease_duration></liveliness>
+        <liveliness><kind>AUTOMATIC</kind><lease_duration><sec>0</sec><nanosec>100000000</nanosec></lease_duration><announcement_period><sec>0</sec><nanosec>30000000</nanosec></announcement_period></liveliness>
       </qos>
       <topic><historyQos><kind>KEEP_LAST</kind><depth>1</depth></historyQos></topic>
     </data_reader>
