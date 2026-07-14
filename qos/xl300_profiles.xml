@@ -29,6 +29,23 @@
           <discovery_config>
             <discoveryProtocol>SIMPLE</discoveryProtocol>
           </discovery_config>
+          <!-- Cross-container discovery on Docker Desktop: SPDP MULTICAST (239.255.0.1)
+               does NOT traverse between separate --network=host containers on Docker
+               Desktop for Windows (confirmed 2026-07-15: svp_manager publishes sensors/svp,
+               but nss in another container received nothing). Adding an initial peer makes
+               Fast DDS ALSO announce via UNICAST to that address's participant-port range,
+               bypassing multicast. All --network=host containers share the Docker Desktop
+               VM's loopback, so 127.0.0.1 reaches every co-located participant. Harmless on
+               a real LAN (multicast still runs too); this only ADDS a unicast bootstrap.
+               Production direction is the same idea at scale -- Discovery Server for the
+               multi-node k3s fabric where multicast is likewise constrained (contract §2.0). -->
+          <initialPeersList>
+            <locator>
+              <udpv4>
+                <address>127.0.0.1</address>
+              </udpv4>
+            </locator>
+          </initialPeersList>
         </builtin>
       </rtps>
     </participant>
