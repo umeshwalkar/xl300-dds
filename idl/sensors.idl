@@ -3,6 +3,17 @@
 // sensor_id 1 & 2 are two independent instances (each with its own history/liveliness).
 // This is DDS's version of an MQTT key/instance table.
 //
+// Every struct below carries sensor_id + sensor_name, even the single-device ones
+// (InsSample/SvpSample/DepthSample/SoundVel) where it isn't (yet) a @key -- every
+// publish topic must self-identify which physical unit produced the sample, for
+// logging/health correlation, and so a config-level device id/name mismatch is
+// visible on the wire, not just in a log line. Only GnssFix/Altitude use sensor_id
+// as an actual @key today (they are genuinely multi-instance); the others carry it
+// as a plain informational field so adding it doesn't change those topics' existing
+// no-key wire semantics. Added at the END of each struct (not after header) --
+// @extensibility(APPENDABLE) only guarantees compatibility for fields appended at
+// the end; inserting mid-struct is not a safe appendable evolution (common.idl).
+//
 // Rates below adopt the SAD/datasheet values (not max-capability numbers):
 //   ins        up to 200 Hz ingest (SPRINT-Nav Mini); NSS fuses/publishes nav/core at 100 Hz
 //   gnss       100 Hz position / 50 Hz heading (AsteRx-U3)
@@ -44,6 +55,8 @@ module xl300 {
     Validity v_altitude;
     Validity v_heading;
     Validity v_velocity;
+    unsigned short sensor_id;       // always 1 today (single INS) -- not a @key, see file header
+    string<32>     sensor_name;     // e.g. "sprintnavmini", from DeviceConfig.name
   };
 
   // sensors/gnss  (two instances: sensor_id = 1, 2).
@@ -63,6 +76,7 @@ module xl300 {
     octet  fix_quality;             // NMEA GGA fix quality
     octet  num_sats;
     boolean valid;
+    string<32> sensor_name;         // e.g. "gnss-1", from DeviceConfig.name
   };
 
   // sensors/svp
@@ -73,6 +87,8 @@ module xl300 {
     double sound_velocity;
     double temperature;
     boolean valid;
+    unsigned short sensor_id;       // always 1 today (single SVP) -- not a @key, see file header
+    string<32>     sensor_name;     // e.g. "svp_device", from DeviceConfig.name
   };
 
   // sensors/sbes — up to 6 physical Impact Subsea altimeter/OAS units, keyed by
@@ -97,15 +113,20 @@ module xl300 {
     double energy;                  // 0-1 signal energy (ISADI energy)
     double temperature;             // degC, transducer temperature (ISADI temperature)
     boolean valid;
+    string<32> sensor_name;         // e.g. "FrontDown", from DeviceConfig.name
   };
 
-  // sensors/ctd/depth
+  // sensors/ctd/depth — published by MPSS's ctd-adaptor (not implemented in this
+  // repo). sensor_id/sensor_name informational only -- exactly one CTD (§8.2), not
+  // a @key, same reasoning as InsSample/SvpSample.
   @extensibility(APPENDABLE)
   struct DepthSample {
     CommonHeader header;
     double depth;
     double pressure;
     boolean valid;
+    unsigned short sensor_id;       // always 1 today (single CTD)
+    string<32>     sensor_name;     // e.g. "ctd", from MPSS's device config
   };
 
   // sensors/ctd/sv
@@ -114,6 +135,8 @@ module xl300 {
     CommonHeader header;
     double sound_velocity;
     boolean valid;
+    unsigned short sensor_id;       // always 1 today (single CTD)
+    string<32>     sensor_name;     // e.g. "ctd", from MPSS's device config
   };
 
 };

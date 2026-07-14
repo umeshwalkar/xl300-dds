@@ -18,7 +18,7 @@ Examples: `nav/core`, `sensors/gnss/1`, `ctrl/fins/cmd`, `health/mnss`.
 - **Partitions** within a domain mirror the namespaces/VLANs: `control`, `navigation`, `payload`, `comms`, `power`, `infra`.
 - **`nss-internal` (private partition).** Raw nav-sensor measurements (INS, GNSS×2, SVP, bridged CTD) feed **NSS** (the consolidated fusion+enrichment component, formerly "NSS-integrity") over this private partition — they are **not** on the public vehicle bus, so raw position/depth/orientation never traverse the shared fabric. See §1.4. **Exception: `sensors/sbes` is NOT here** — see below. **Transport, revised now that NSS runs 3-way across 3 separate physical nodes (plan §8.7):**
   - **INS ↔ NSS: via `ins_manager`, not SHM.** SHM only works within one host, and 3 NSS replicas live on 3 different nodes, so a single physical INS can't be SHM-shared to all of them. `ins_manager` (Tier-0, 2-way active-standby) holds the actual wire connection to the INS and republishes onto `sensors/ins` — **all 3 NSS replicas subscribe identically** (SHARED ownership), which is also what keeps the 3 independent fusion computations converged without needing an explicit inter-replica state-sync channel. Read path: INS's **UDP broadcast output** (confirmed supported, SPRINT-Nav Mini manual §6.15) — `ins_manager` just listens, no connection-limit concern. Write path (aiding): **TCP** to the INS's aiding-input port — single-client behavior unconfirmed, so `ins_manager`'s own primary/standby pair uses **sequenced failover** (standby only opens its connection after detecting the primary's `health/ins-manager` heartbeat has lapsed), gated by the same DDS `EXCLUSIVE`-ownership arbitration already used for `aiding/ins` itself. See §3 notes and plan §8.7/§10.
-  - **GNSS/SVP adaptors: Tier-1 k3s pods** that are freely rescheduled, so they reach `nss-internal` over **hostNetwork multicast**, not SHM. Coastable → their reschedule gap is tolerable. **This means `nss-internal` is a real on-fabric multicast partition, not purely intra-node** — so it depends on **IGMP snooping** on the Peplink switches (open verify item, plan §7/§10) and must be scoped to the navigation VLAN. Being a *private* partition (raw sensor data, sole subscriber = NSS) it still satisfies §1.4: no *fused* vehicle-state is duplicated on the public bus.
+  - **GNSS/SVP adaptors: Tier-1 k3s pods** that are freely rescheduled, so they reach `nss-internal` over **hostNetwork multicast**, not SHM. Coastable → their reschedule gap is tolerable. **This means `nss-internal` is a real on-fabric multicast partition, not purely intra-node** — so it depends on **IGMP snooping** on the Peplink switches (open verify item, plan §7/§10) and must be scoped to the navigation VLAN. Being a *private* partition (raw sensor data) it still satisfies §1.4: no *fused* vehicle-state is duplicated on the public bus. **`data-recorder`** (below) is a second, read-only subscriber on this partition — multicast fan-out means an extra reader adds no publisher-side cost, and it never republishes anything, so §1.4 still holds; it just means "sole subscriber = NSS" (the older wording here) is no longer literally true, only "sole *authoritative* consumer = NSS."
   - **`sensors/sbes` is on the PUBLIC partition, not `nss-internal`.** `oas_manager` (Tier-1, one process) owns up to 6 physical Impact Subsea altimeter/OAS units and publishes ALL of them as keyed instances (`Altitude.sensor_id`, 1-6) on ONE topic. Only sensor_id 1 (bow) and 2 (aft) are NSS's aiding inputs — sensor_id 3-6 are obstacle-facing units consumed by **other subsystems** (mnss/pcss), not NSS. Because this topic has real consumers beyond NSS, it cannot live on the NSS-exclusive `nss-internal` partition the way `nss-internal`'s "sole subscriber = NSS" invariant requires — NSS subscribes it on a separate public-partition reader and filters client-side to sensor_id 1/2.
   - **`aiding/usbl-position` (CMS → NSS):** CMS owns `usbl-manager` (both USBL units — their primary role is the acoustic comms link to the topside GUI) and publishes one consolidated position+time feed onto this same private partition; NSS treats it as one more aiding input, gated the same as GNSS/SVP.
 - Cross-tier topics (`nav/core`, `ctrl/setpoints/*`, `health/*`, `safety/state`) are bridged by an explicit **DDS Router** instance with an allow-list — nothing else crosses the Tier-0/Tier-1 boundary. This keeps Tier-0 transport-isolated while exposing exactly the agreed topics.
@@ -30,6 +30,8 @@ Examples: `nav/core`, `sensors/gnss/1`, `ctrl/fins/cmd`, `health/mnss`.
 
 ### 1.3 Keys
 Multi-instance topics carry a key so DDS tracks instances independently. Keyed fields are noted in §6 IDL (e.g. `sensor_id`, `obstacle_id`).
+
+**Every sensor sample also carries `sensor_id` + `sensor_name` — not just the multi-instance topics.** `sensors/gnss` and `sensors/sbes` use `sensor_id` as a real `@key` (genuinely multiple physical units on one topic). `sensors/ins`, `sensors/svp`, `sensors/ctd/{depth,sv}` are single-device today and carry `sensor_id`/`sensor_name` as plain (non-key) fields — self-identification for logging/health correlation, not instance multiplicity. Every sensor manager (`ins_manager`, `gnss_manager`, `svp_manager`, `oas_manager`) populates both from its own `DeviceConfig.id`/`.name` at publish time — see `dds/idl/sensors.idl`.
 
 ---
 
@@ -161,6 +163,7 @@ Reference these by name in the tables instead of repeating settings.
 - `health/<subsystem>` is the universal heartbeat — *every* Tier-0 and Tier-1 component publishes one (e.g. `health/mnss`, `health/eoir`). SES arms `on_deadline_missed`; a miss is the failure signal that can trigger `safety/state`.
 - Payload bulk stays on the **Payload VLAN / Domain 1** and never touches Domain 0 — a sonar burst can't perturb control traffic.
 - The **DDS↔MQTT bridge** in CMS subscribes to `telemetry/shore` (and selected `health/*`) and republishes to the shore MQTT broker over TLS; inbound `mission/plan` is the reverse path.
+- **`data-recorder`** (Tier-1, `src/data-recorder`) is a read-only, system-wide subscriber that archives `sensors/*`, `nav/*`, `health/*`, and `safety/state` into TimescaleDB for Grafana — a forensic/observability sink, not a data path any other component depends on. It joins Domain 0 (like the aiding-sensor adaptors and TMS) purely to reach `nss-internal`/`navigation`/`payload`, and publishes only its own `health/data-recorder`. See `src/data-recorder/README.md`.
 
 ---
 
@@ -239,6 +242,8 @@ struct InsSample {
   double vx, vy, vz, wx, wy, wz;
   double water_temp, sound_velocity;
   Validity v_position, v_depth, v_altitude, v_heading, v_velocity;   // INS's OWN flags, pre-NSS-consolidation
+  unsigned short sensor_id;          // always 1 today (single INS) -- informational, not a @key
+  string<32> sensor_name;            // e.g. "sprintnavmini", from DeviceConfig.name
 };
 
 // sensors/gnss — GNSS-1 (2 antennas) also provides heading; GNSS-2 (1 antenna) position only
@@ -250,6 +255,7 @@ struct GnssFix {
   boolean heading_valid;
   octet fix_quality, num_sats;
   boolean valid;
+  string<32> sensor_name;            // e.g. "gnss-1", from DeviceConfig.name
 };
 
 enum SafetyLevel { NOMINAL, CAUTION, EMERGENCY_SURFACE, ABORT };   // module-scope, not nested (IDL doesn't allow nested enums)
